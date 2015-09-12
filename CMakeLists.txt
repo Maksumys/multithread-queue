@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.3)
+project(naychka)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
+
+set(SOURCE_FILES main.cpp mutex_type.h mutexqueue.h mutexqueue_oneLock.h queue.h multiQueue.h)
+add_executable(naychka ${SOURCE_FILES})
