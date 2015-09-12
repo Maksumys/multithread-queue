@@ -9,6 +9,7 @@
 #include <iostream>
 #include "mutexqueue.h"
 #include "mutexqueue_oneLock.h"
+#include "multiQueue.h"
 #include <thread>
 #include <vector>
 #include <chrono>
@@ -16,19 +17,19 @@
 #include <iomanip>
 #include <cmath>
 
-constexpr int rw_count = 500000;
-constexpr int size_repit = 10;
-constexpr int max_thread = 6;
+constexpr int rw_count = 200000;
+constexpr int size_repit = 3;
+constexpr int max_thread = 3;
 
 int main() {
     std::cout << "!bez nagryzki!" << std::endl;
     std::cout << "thread_queue_threeLock" << std::endl;
     for (std::size_t size_thread = 1; size_thread <= max_thread; size_thread++) {
         std::cout << "{";
-        for (std::size_t multiplier = 1; multiplier <= 4; multiplier++) {
+        for (std::size_t multiplier = 1; multiplier <= 3; multiplier++) {
             double elapsed_seconds = 0;
             std::chrono::time_point<std::chrono::system_clock> start, end;
-            thread_queue_oneLock<int, spinlock_mutex> a(100000);
+            multiQueue<int, spinlock_mutex> a(2, 100000);
             start = std::chrono::system_clock::now();
             for (std::size_t i = 1; i <= size_repit; i++) {
                 std::vector<std::thread> read_thread;
@@ -36,12 +37,12 @@ int main() {
                 for (std::size_t j = 0; j < size_thread; j++) {
                     write_thread.push_back(std::thread([&] {
                         for (std::size_t k = 0; k < ceil((rw_count * multiplier) / size_thread); k++) {
-                            a.try_push(1);
+                            a.push(1);
                         }
                     }));
                     read_thread.push_back(std::thread([&] {
                         for (std::size_t k = 0; k < ceil((rw_count * multiplier) / size_thread); k++) {
-                            a.try_pop();
+                            a.pop();
                         }
                     }));
                 }

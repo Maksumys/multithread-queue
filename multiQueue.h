@@ -46,17 +46,20 @@ public:
             (i < _length_n) ? i++ : i = 0;
         }
         //проверка места на добавление
-        while(_mas_mutex_distance[i].lock()){
+        while(true){
+            _mas_mutex_distance[i].lock();
             if (_mas_distance[i] > 0) {
                 break;
             }
+            _mas_mutex_distance[i].unlock();
         }
         _mas_mutex_distance[i].unlock();
-        _mas_queue[_mas_tail[i]] = elem;
+        _mas_queue[_length_m * i + _mas_tail[i]] = elem;
         (_mas_tail[i] == 0) ? _mas_tail[i] = _length_m - 1 : _mas_tail[i]--;
         _mas_mutex_distance[i].lock();
         _mas_distance[i]--;
         _mas_mutex_distance[i].unlock();
+        _mas_mutex_tail[i].unlock();
     }
 
     void pop() {
@@ -64,23 +67,26 @@ public:
         while(!_mas_mutex_head[i].try_lock()) {
             (i < _length_n)? i++ : i = 0;
         }
-        while(!_mas_mutex_distance[i].lock()) {
+        while(true) {
+            _mas_mutex_distance[i].lock();
             if(_mas_distance[i] != _length_m) {
                 break;
             }
+            _mas_mutex_distance[i].unlock();
         }
-        _mas_mutex_distance[i].unclock();
+        _mas_mutex_distance[i].unlock();
         (_mas_head[i] == 0) ? _mas_head[i] = _length_m - 1 : _mas_head[i]--;
         _mas_mutex_distance[i].lock();
         _mas_distance[i]++;
         _mas_mutex_distance[i].unlock();
+        _mas_mutex_head[i].unlock();
     }
 
     std::experimental::optional<type_value> front() {
         for (auto i = 0; i < _length_n; i++) {
             if(_mas_distance[i] != _length_m) {
                 std::lock_guard<type_mutex> lock(_mas_mutex_head[i]);
-                return std::experimental::optional<type_value>(_mas_queue[i][_mas_head[i]]);
+                return std::experimental::optional<type_value>(_mas_queue[_length_m * i + _mas_head[i]]);
             }
         }
         return std::experimental::optional<type_value>();
@@ -90,7 +96,7 @@ public:
         for (auto i = 0; i < _length_n; i++) {
             if(_mas_distance[i] != _length_m) {
                 std::lock_guard<type_mutex> lock(_mas_mutex_tail[i]);
-                return std::experimental::optional<type_value>(_mas_queue[i][_mas_tail[i]]);
+                return std::experimental::optional<type_value>(_mas_queue[_length_m * i + _mas_tail[i]]);
             }
         }
         return std::experimental::optional<type_value>();
