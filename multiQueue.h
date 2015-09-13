@@ -43,7 +43,7 @@ public:
         std::size_t i = 0;
         //прыгаем по очередям пока не найдем свободную
         while(!_mas_mutex_tail[i].try_lock()) {
-            (i < _length_n) ? i++ : i = 0;
+            (i < _length_n - 1) ? i++ : i = 0;
         }
         //проверка места на добавление
         while(true){
@@ -65,7 +65,7 @@ public:
     void pop() {
         std::size_t i = 0;
         while(!_mas_mutex_head[i].try_lock()) {
-            (i < _length_n)? i++ : i = 0;
+            (i < _length_n - 1)? i++ : i = 0;
         }
         while(true) {
             _mas_mutex_distance[i].lock();
