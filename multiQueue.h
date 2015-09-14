@@ -7,7 +7,7 @@
 
 #include <memory>
 #include <mutex>
-#include <experimental/optional>
+#include <bits/unique_ptr.h>
 
 template<class type_value, class type_mutex>
 class multiQueue {
@@ -41,22 +41,22 @@ public:
 
     void push(type_value elem) {
         std::size_t i = 0;
-        //прыгаем по очередям пока не найдем свободную
-        while(!_mas_mutex_tail[i].try_lock()) {
+        //прыгаем по очередям пока не найдем свободную или подходящую
+        while(true) {
+            if (_mas_mutex_tail[i].try_lock()) {
+                while(!_mas_mutex_distance[i].try_lock()){}
+                if (_mas_distance[i] > 0) {
+                    _mas_mutex_distance[i].unlock();
+                    break;
+                }
+                _mas_mutex_distance[i].unlock();
+                _mas_mutex_tail[i].unlock();
+            }
             (i < _length_n - 1) ? i++ : i = 0;
         }
-        //проверка места на добавление
-        while(true){
-            _mas_mutex_distance[i].lock();
-            if (_mas_distance[i] > 0) {
-                break;
-            }
-            _mas_mutex_distance[i].unlock();
-        }
-        _mas_mutex_distance[i].unlock();
         _mas_queue[_length_m * i + _mas_tail[i]] = elem;
         (_mas_tail[i] == 0) ? _mas_tail[i] = _length_m - 1 : _mas_tail[i]--;
-        _mas_mutex_distance[i].lock();
+        while(!_mas_mutex_distance[i].try_lock()){}
         _mas_distance[i]--;
         _mas_mutex_distance[i].unlock();
         _mas_mutex_tail[i].unlock();
@@ -64,42 +64,41 @@ public:
 
     void pop() {
         std::size_t i = 0;
-        while(!_mas_mutex_head[i].try_lock()) {
+        while(true) {
+            if (_mas_mutex_head[i].try_lock()) {
+                while(!_mas_mutex_distance[i].try_lock()){}
+                if(_mas_distance[i] != _length_m) {
+                    _mas_mutex_distance[i].unlock();
+                    break;
+                }
+                _mas_mutex_distance[i].unlock();
+                _mas_mutex_head[i].unlock();
+            }
             (i < _length_n - 1)? i++ : i = 0;
         }
-        while(true) {
-            _mas_mutex_distance[i].lock();
-            if(_mas_distance[i] != _length_m) {
-                break;
-            }
-            _mas_mutex_distance[i].unlock();
-        }
-        _mas_mutex_distance[i].unlock();
         (_mas_head[i] == 0) ? _mas_head[i] = _length_m - 1 : _mas_head[i]--;
-        _mas_mutex_distance[i].lock();
+        while(!_mas_mutex_distance[i].try_lock()){}
         _mas_distance[i]++;
         _mas_mutex_distance[i].unlock();
         _mas_mutex_head[i].unlock();
     }
 
-    std::experimental::optional<type_value> front() {
+    type_value front() {
         for (auto i = 0; i < _length_n; i++) {
             if(_mas_distance[i] != _length_m) {
                 std::lock_guard<type_mutex> lock(_mas_mutex_head[i]);
-                return std::experimental::optional<type_value>(_mas_queue[_length_m * i + _mas_head[i]]);
+                return _mas_queue[_length_m * i + _mas_head[i]];
             }
         }
-        return std::experimental::optional<type_value>();
     }
 
-    std::experimental::optional<type_value> back() {
+    type_value back() {
         for (auto i = 0; i < _length_n; i++) {
             if(_mas_distance[i] != _length_m) {
                 std::lock_guard<type_mutex> lock(_mas_mutex_tail[i]);
-                return std::experimental::optional<type_value>(_mas_queue[_length_m * i + _mas_tail[i]]);
+                return _mas_queue[_length_m * i + _mas_tail[i]];
             }
         }
-        return std::experimental::optional<type_value>();
     }
 };
 
